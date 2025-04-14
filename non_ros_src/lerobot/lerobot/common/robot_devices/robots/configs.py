@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from typing import Sequence, Literal
 
 import draccus
-
+# Import camera and motor configuration classes from LeRobot.
 from lerobot.common.robot_devices.cameras.configs import (
     CameraConfig,
     IntelRealSenseCameraConfig,
@@ -15,7 +15,8 @@ from lerobot.common.robot_devices.motors.configs import (
     MotorsBusConfig,
 )
 
-
+# Abstract base class for robot configurations,
+#  integrating with draccus for choice registration.
 @dataclass
 class RobotConfig(draccus.ChoiceRegistry, abc.ABC):
     @property
@@ -515,56 +516,44 @@ class StretchRobotConfig(RobotConfig):
 
     mock: bool = False
 
-
+# Configuration for the Astra robot (base class).
 @RobotConfig.register_subclass("astra")
 @dataclass
 class AstraRobotConfig(RobotConfig):
-    # `max_relative_target` limits the magnitude of the relative positional target vector for safety purposes.
-    # Set this to a positive scalar to have the same value for all motors, or a list that is the same length as
-    # the number of motors in your follower arms.
-    max_relative_target: int | None = None
+    max_relative_target: int | None = None  # Safety limit for motor movements, optional.
+    cameras: dict[str, CameraConfig] = field(default_factory=lambda: {})  # No cameras by default.
+    space: None = None  # Placeholder for control space (joint or Cartesian), defaults to None.
+    mock: bool = False  # Mock mode disabled by default.
 
-    cameras: dict[str, CameraConfig] = field(
-        default_factory=lambda: {
-        }
-    )
-    
-    space: None = None
-
-    mock: bool = False
-
-
+# Subclass for Astra in joint space control.
 @RobotConfig.register_subclass("astra_joint")
 @dataclass
 class AstraJointRobotConfig(AstraRobotConfig):
-    # `max_relative_target` limits the magnitude of the relative positional target vector for safety purposes.
-    # Set this to a positive scalar to have the same value for all motors, or a list that is the same length as
-    # the number of motors in your follower arms.
-    max_relative_target: int | None = None
+    max_relative_target: int | None = None  # Safety limit, optional.
+    cameras: dict[str, CameraConfig] = field(default_factory=lambda: {})  # No cameras by default.
+    space: Literal["joint"] = "joint"  # Specifies joint space control.
+    mock: bool = False  # Mock mode disabled by default.
 
-    cameras: dict[str, CameraConfig] = field(
-        default_factory=lambda: {
-        }
-    )
-    
-    space: Literal["joint"] = "joint"
-
-    mock: bool = False
-
-
+# Subclass for Astra in Cartesian space control (not implemented).
 @RobotConfig.register_subclass("astra_cart")
 @dataclass
 class AstraCartRobotConfig(AstraRobotConfig):
-    # `max_relative_target` limits the magnitude of the relative positional target vector for safety purposes.
-    # Set this to a positive scalar to have the same value for all motors, or a list that is the same length as
-    # the number of motors in your follower arms.
-    max_relative_target: int | None = None
+    max_relative_target: int | None = None  # Safety limit, optional.
+    cameras: dict[str, CameraConfig] = field(default_factory=lambda: {})  # No cameras by default.
+    space: Literal["cart"] = "cart"  # Specifies Cartesian space control.
+    mock: bool = False  # Mock mode disabled by default.
 
-    cameras: dict[str, CameraConfig] = field(
-        default_factory=lambda: {
-        }
-    )
-    
-    space: Literal["cart"] = "cart"
 
-    mock: bool = False
+
+
+"""
+Key Features and Purpose
+Base Structure: RobotConfig serves as an abstract base class, extended by specific robot configurations.
+Astra Configurations: Three variants are defined:
+AstraRobotConfig: Base configuration with no specific control space.
+AstraJointRobotConfig: Specifies joint space control.
+AstraCartRobotConfig: Specifies Cartesian space control (not yet implemented).
+Safety: max_relative_target provides a configurable safety limit for motor movements.
+Mock Mode: Enables simulation for testing without physical hardware.
+Camera Flexibility: Astra configurations default to no cameras, but the structure allows adding them.
+"""

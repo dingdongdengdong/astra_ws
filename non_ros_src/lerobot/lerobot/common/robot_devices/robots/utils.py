@@ -21,7 +21,7 @@ def get_arm_id(name, arm_type):
     """
     return f"{name}_{arm_type}"
 
-
+# Protocol defining the expected interface for robot classes.
 class Robot(Protocol):
     # TODO(rcadene, aliberts): Add unit test checking the protocol is implemented in the corresponding classes
     robot_type: str
@@ -34,7 +34,7 @@ class Robot(Protocol):
     def send_action(self, action): ...
     def disconnect(self): ...
 
-
+# Factory function to create robot configurations based on type.
 def make_robot_config(robot_type: str, **kwargs) -> RobotConfig:
     if robot_type == "aloha":
         return AlohaRobotConfig(**kwargs)
@@ -57,7 +57,7 @@ def make_robot_config(robot_type: str, **kwargs) -> RobotConfig:
     else:
         raise ValueError(f"Robot type '{robot_type}' is not available.")
 
-
+# Factory function to create robot instances from configurations.
 def make_robot_from_config(config: RobotConfig):
     if isinstance(config, ManipulatorRobotConfig):
         from lerobot.common.robot_devices.robots.manipulator import ManipulatorRobot
@@ -74,7 +74,13 @@ def make_robot_from_config(config: RobotConfig):
     else:
         raise ValueError(f"Robot type '{config.type}' is not available.")
 
-
+# Convenience function to create a robot instance directly from type and kwargs.
 def make_robot(robot_type: str, **kwargs) -> Robot:
-    config = make_robot_config(robot_type, **kwargs)
-    return make_robot_from_config(config)
+    config = make_robot_config(robot_type, **kwargs)  # Create config first.
+    return make_robot_from_config(config)  # Then create robot instance.
+
+"""
+Factory Pattern: make_robot_config and make_robot_from_config enable modular creation of configurations and robots.
+Astra Support: Supports instantiation of Astra robots in different control spaces (astra, astra_joint, astra_cart).
+Protocol: Robot protocol ensures a consistent interface across robot implementations.
+"""

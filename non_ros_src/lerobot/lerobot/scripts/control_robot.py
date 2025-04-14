@@ -114,13 +114,21 @@ python lerobot/scripts/control_robot.py \
     --control.policy.path=outputs/train/act_koch_pick_place_lego/checkpoints/080000/pretrained_model
 ```
 """
+# Docstring with usage examples:
+# - Explains how to calibrate, teleoperate, record, and replay using command-line arguments.
+# - Includes notes on keyboard controls and resuming recording.
+"""
+Utilities to control a robot.
+[... see original docstring for examples ...]
+"""
 
+# Import libraries:
+# - Standard Python modules (logging, time, etc.) for general utilities.
+# - LeRobot-specific modules for dataset management, policy creation, and robot control.
 import logging
 import time
 from dataclasses import asdict
 from pprint import pformat
-
-# from safetensors.torch import load_file, save_file
 from lerobot.common.datasets.lerobot_dataset import LeRobotDataset
 from lerobot.common.policies.factory import make_policy
 from lerobot.common.robot_devices.control_configs import (
@@ -146,14 +154,11 @@ from lerobot.common.robot_devices.utils import busy_wait, safe_disconnect
 from lerobot.common.utils.utils import has_method, init_logging, log_say
 from lerobot.configs import parser
 
-########################################################################################
-# Control modes
-########################################################################################
-
-
+# Calibration function:
+# - Recalibrates the robot by removing existing calibration files and reconnecting.
 @safe_disconnect
 def calibrate(robot: Robot, cfg: CalibrateControlConfig):
-    # TODO(aliberts): move this code in robots' classes
+    # Special case for "stretch" robots:
     if robot.robot_type.startswith("stretch"):
         if not robot.is_connected:
             robot.connect()
@@ -161,22 +166,19 @@ def calibrate(robot: Robot, cfg: CalibrateControlConfig):
             robot.home()
         return
 
+    # Determine arms to calibrate:
     arms = robot.available_arms if cfg.arms is None else cfg.arms
     unknown_arms = [arm_id for arm_id in arms if arm_id not in robot.available_arms]
     available_arms_str = " ".join(robot.available_arms)
     unknown_arms_str = " ".join(unknown_arms)
 
+    # Validate arms input:
     if arms is None or len(arms) == 0:
-        raise ValueError(
-            "No arm provided. Use `--arms` as argument with one or more available arms.\n"
-            f"For instance, to recalibrate all arms add: `--arms {available_arms_str}`"
-        )
-
+        raise ValueError(f"No arm provided. Use `--arms {available_arms_str}`")
     if len(unknown_arms) > 0:
-        raise ValueError(
-            f"Unknown arms provided ('{unknown_arms_str}'). Available arms are `{available_arms_str}`."
-        )
+        raise ValueError(f"Unknown arms: '{unknown_arms_str}'. Available: `{available_arms_str}`")
 
+    # Remove existing calibration files:
     for arm_id in arms:
         arm_calib_path = robot.calibration_dir / f"{arm_id}.json"
         if arm_calib_path.exists():
@@ -185,39 +187,32 @@ def calibrate(robot: Robot, cfg: CalibrateControlConfig):
         else:
             print(f"Calibration file not found '{arm_calib_path}'")
 
+    # Disconnect and reconnect to trigger calibration:
     if robot.is_connected:
         robot.disconnect()
-
-    # Calling `connect` automatically runs calibration
-    # when the calibration file is missing
     robot.connect()
     robot.disconnect()
     print("Calibration is done! You can now teleoperate and record datasets!")
 
-
+# Teleoperation function:
+# - Allows manual control of the robot with optional camera display.
 @safe_disconnect
 def teleoperate(robot: Robot, cfg: TeleoperateControlConfig):
     control_loop(
         robot,
-        control_time_s=cfg.teleop_time_s,
-        fps=cfg.fps,
-        teleoperate=True,
-        display_cameras=cfg.display_cameras,
+        control_time_s=cfg.teleop_time_s,  # Duration of teleoperation.
+        fps=cfg.fps,                       # Control frequency.
+        teleoperate=True,                  # Enable teleoperation mode.
+        display_cameras=cfg.display_cameras,  # Show camera feeds if enabled.
     )
 
-
+# Recording function:
+# - Records datasets by controlling the robot manually or with a policy.
 @safe_disconnect
-def record(
-    robot: Robot,
-    cfg: RecordControlConfig,
-) -> LeRobotDataset:
-    # TODO(rcadene): Add option to record logs
+def record(robot: Robot, cfg: RecordControlConfig) -> LeRobotDataset:
+    # Resume existing dataset or create a new one:
     if cfg.resume:
-        dataset = LeRobotDataset(
-            cfg.repo_id,
-            root=cfg.root,
-            local_files_only=cfg.local_files_only,
-        )
+        dataset = LeRobotDataset(cfg.repo_id, root=cfg.root, local_files_only=cfg.local_files_only)
         if len(robot.camera_features) > 0:
             dataset.start_image_writer(
                 num_processes=cfg.num_image_writer_processes,
@@ -225,7 +220,6 @@ def record(
             )
         sanity_check_dataset_robot_compatibility(dataset, robot, cfg.fps, cfg.video)
     else:
-        # Create empty dataset or load existing saved episodes
         sanity_check_dataset_name(cfg.repo_id, cfg.policy)
         dataset = LeRobotDataset.create(
             cfg.repo_id,
@@ -237,40 +231,40 @@ def record(
             image_writer_threads=cfg.num_image_writer_threads_per_camera * len(robot.camera_features),
         )
 
-    # Load pretrained policy
+    # Load policy if provided:
     policy = None if cfg.policy is None else make_policy(cfg.policy, cfg.device, ds_meta=dataset.meta)
 
+    # Connect to the robot:
     if not robot.is_connected:
         robot.connect()
 
+    # Initialize keyboard listener for control:
     listener, events = init_keyboard_listener()
 
-    # Execute a few seconds without recording to:
-    # 1. teleoperate the robot to move it in starting position if no policy provided,
-    # 2. give times to the robot devices to connect and start synchronizing,
-    # 3. place the cameras windows on screen
+    # Warmup phase:
+    # - Allows initial positioning and synchronization.
     enable_teleoperation = policy is None
     log_say("Warmup record", cfg.play_sounds)
     warmup_record(robot, events, enable_teleoperation, cfg.warmup_time_s, cfg.display_cameras, cfg.fps)
 
+    # Safety stop if supported:
     if has_method(robot, "teleop_safety_stop"):
         robot.teleop_safety_stop()
 
+    # Record episodes:
     recorded_episodes = 0
     while True:
         if recorded_episodes >= cfg.num_episodes:
             break
 
-        # Execute a few seconds without recording to give time to manually reset the environment
-        # Current code logic doesn't allow to teleoperate during this time.
-        # TODO(rcadene): add an option to enable teleoperation during reset
-        # Skip reset for the last episode to be recorded
+        # Reset environment between episodes:
         if not events["stop_recording"] and (
             (recorded_episodes < cfg.num_episodes) or events["rerecord_episode"]
         ):
             log_say("Reset the environment", cfg.play_sounds)
             reset_environment(robot, events, cfg.reset_time_s)
 
+        # Record an episode:
         log_say(f"Recording episode {dataset.num_episodes}", cfg.play_sounds)
         record_episode(
             dataset=dataset,
@@ -284,6 +278,7 @@ def record(
             fps=cfg.fps,
         )
 
+        # Handle re-recording:
         if events["rerecord_episode"]:
             log_say("Re-record episode", cfg.play_sounds)
             events["rerecord_episode"] = False
@@ -291,65 +286,65 @@ def record(
             dataset.clear_episode_buffer()
             continue
 
-        # dataset.save_episode(cfg.single_task)
-        dataset.save_episode(cfg.single_task, encode_videos=False) # encode video when everything is done
+        # Save episode without encoding videos:
+        dataset.save_episode(cfg.single_task, encode_videos=False)
         recorded_episodes += 1
 
         if events["stop_recording"]:
             break
 
+    # Finalize recording:
     log_say("Stop recording", cfg.play_sounds, blocking=True)
     stop_recording(robot, listener, cfg.display_cameras)
 
+    # Compute stats and push to hub if enabled:
     if cfg.run_compute_stats:
         logging.info("Computing dataset statistics")
-
     dataset.consolidate(cfg.run_compute_stats)
-
     if cfg.push_to_hub:
         dataset.push_to_hub(tags=cfg.tags, private=cfg.private)
 
     log_say("Exiting", cfg.play_sounds)
     return dataset
 
-
+# Replay function:
+# - Replays a recorded episode by sending actions to the robot.
 @safe_disconnect
-def replay(
-    robot: Robot,
-    cfg: ReplayControlConfig,
-):
-    # TODO(rcadene, aliberts): refactor with control_loop, once `dataset` is an instance of LeRobotDataset
-    # TODO(rcadene): Add option to record logs
-
+def replay(robot: Robot, cfg: ReplayControlConfig):
+    # Load the dataset for the specified episode:
     dataset = LeRobotDataset(
         cfg.repo_id, root=cfg.root, episodes=[cfg.episode], local_files_only=cfg.local_files_only
     )
     actions = dataset.hf_dataset.select_columns("action")
 
+    # Connect to the robot:
     if not robot.is_connected:
         robot.connect()
 
+    # Replay the episode:
     log_say("Replaying episode", cfg.play_sounds, blocking=True)
     for idx in range(dataset.num_frames):
         start_episode_t = time.perf_counter()
-
         action = actions[idx]["action"]
-        robot.send_action(action)
+        robot.send_action(action)  # Send action to the robot.
 
+        # Maintain timing:
         dt_s = time.perf_counter() - start_episode_t
-        busy_wait(1 / cfg.fps - dt_s)
-
+        busy_wait(1 / cfg.fps - dt_s)  # Wait to match the specified fps.
         dt_s = time.perf_counter() - start_episode_t
-        log_control_info(robot, dt_s, fps=cfg.fps)
+        log_control_info(robot, dt_s, fps=cfg.fps)  # Log timing info.
 
-
+# Main control function:
+# - Parses config and executes the appropriate control mode.
 @parser.wrap()
 def control_robot(cfg: ControlPipelineConfig):
     init_logging()
-    logging.info(pformat(asdict(cfg)))
+    logging.info(pformat(asdict(cfg)))  # Log configuration.
 
+    # Create robot instance from config:
     robot = make_robot_from_config(cfg.robot)
 
+    # Execute control mode based on config:
     if isinstance(cfg.control, CalibrateControlConfig):
         calibrate(robot, cfg.control)
     elif isinstance(cfg.control, TeleoperateControlConfig):
@@ -359,11 +354,22 @@ def control_robot(cfg: ControlPipelineConfig):
     elif isinstance(cfg.control, ReplayControlConfig):
         replay(robot, cfg.control)
 
+    # Ensure clean disconnection:
     if robot.is_connected:
-        # Disconnect manually to avoid a "Core dump" during process
-        # termination due to camera threads not properly exiting.
         robot.disconnect()
 
-
+# Entry point:
 if __name__ == "__main__":
     control_robot()
+
+"""
+Key Features and Purpose
+Purpose: Provides a comprehensive interface for robot control and data collection.
+Control Modes:
+Calibrate: Recalibrates arms by managing calibration files.
+Teleoperate: Manual control with customizable frequency and camera display.
+Record: Captures datasets with warmup, reset, and policy support; delays video encoding.
+Replay: Replays episodes at a specified frequency.
+Keyboard Controls: Allows dynamic recording adjustments (e.g., stop, re-record).
+Policy Integration: Supports automated control with pretrained policies.
+"""

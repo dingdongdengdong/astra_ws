@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>OpenCV.js detectMarkers Benchmark</title>
+  <script src="opencv_simd.js"></script>
+</head>
+<body>
+  <div id="result"></div>
+
+  <canvas id="frame" width="1920" height="1080"></canvas>
+
+  <script>
+    async function capture() {
+      window.cv2 = await cv;
+
+      let mediaStream;
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            // frameRate: { min: 30, ideal: 30, max: 30 },
+            // width: { min: 1920, ideal: 1920, max: 1920 },
+            // height: { min: 1080, ideal: 1080, max: 1080 },
+            frameRate: { min: 30, ideal: 30, max: 30 },
+            width: { min: 1280, ideal: 1280, max: 1280 },
+            height: { min: 720, ideal: 720, max: 720 },
+          },
+        });
+      } catch (err) {
+        console.error(`Error opening video capture (may be your cam have too low resolution): ${err.name} ${err.message}`);
+        throw err;
+      }
+
+      // Extract video track.
+      const videoDevice = mediaStream.getVideoTracks()[0];
+      const videoSetting = videoDevice.getSettings();
+      console.log(`Using camera: ${videoDevice.label} ${videoSetting.width}x${videoSetting.height}@${videoSetting.frameRate}`);
+
+      const captureDevice = new ImageCapture(videoDevice, mediaStream);
+
+      const offscreen = new OffscreenCanvas(videoSetting.width, videoSetting.height);
+      const ctx = offscreen.getContext("2d", { willReadFrequently: true });
+
+      // const $canvas = document.createElement('canvas');
+      // $canvas.width = videoSetting.width;
+      // $canvas.height = videoSetting.height;
+      // const ctx = $canvas.getContext('2d', { willReadFrequently: true });
+
+      const $outCanvas = document.getElementById('frame');
+      $outCanvas.width = videoSetting.width;
+      $outCanvas.height = videoSetting.height;
+      const outCtx = $outCanvas.getContext("2d");
+
+      const aruco_dict = cv2.getPredefinedDictionary(cv2.DICT_4X4_50);
+      const aruco_detection_parameters = new cv2.aruco_DetectorParameters();
+      aruco_detection_parameters.cornerRefinementMethod = cv2.CORNER_REFINE_SUBPIX; // Faster
+      // aruco_detection_parameters.cornerRefinementMethod = cv2.CORNER_REFINE_APRILTAG; // Provide subpixel accuracy
+      // aruco_detection_parameters.aprilTagQuadDecimate = 2; // Speed up for wasm
+      const refine_parameters = new cv2.aruco_RefineParameters(10, 3, true)
+      const detector = new cv2.aruco_ArucoDetector(aruco_dict, aruco_detection_parameters, refine_parameters);
+
+      let avgTime = 0;
+      while (true) {
+        const frame = await captureDevice.grabFrame();
+
+        const t0 = performance.now();
+        ctx.drawImage(frame, 0, 0, frame.width, frame.height);
+        const imageData = ctx.getImageData(0, 0, frame.width, frame.height); // 5.2ms@1920x1080 2.5ms@1280x720
+        const t1 = performance.now();
+
+        const mat = cv2.matFromImageData(imageData);
+  
+        const corners = new cv2.MatVector();
+        const ids = new cv2.Mat();
+        const rejected = new cv2.MatVector();
+
+        const t2 = performance.now();
+        detector.detectMarkers(mat, corners, ids, rejected); // 63ms@1920x1080 40ms@1280x720
+        const t3 = performance.now();
+
+        const corners_list_list = [];
+        for (let l = 0; l < corners.size(); ++l) {
+          const temp_corners = corners.get(l);
+          const corners_list = [];
+          const rows = temp_corners.rows;
+          const cols = temp_corners.cols;
+          const channels = Math.trunc(temp_corners.type() / 8) + 1;
+          for (let i = 0; i < rows; ++i) {
+            const row = [];
+            for (let j = 0; j < cols; ++j) {
+              const point = [];
+              for (let k = 0; k < channels; ++k) {
+                point.push(temp_corners.data32F[(i * cols + j) * channels + k]);
+              }
+              row.push(point);
+            }
+            corners_list.push(row);
+          }
+          corners_list_list.push(corners_list);
+        }
+        
+        const ids_list = [];
+        for (let i = 0; i < ids.rows; ++i) {
+          const row = [];
+          for (let j = 0; j < ids.cols; ++j) {
+            row.push(ids.data32S[i * ids.cols + j]);
+          }
+          ids_list.push(row);
+        }
+
+        console.log(JSON.stringify([
+          corners_list_list,
+          ids_list
+        ]));
+
+        // $outCanvas.width = debugFrame.width;
+        // $outCanvas.height = debugFrame.height;
+        // $outCanvas.getContext('2d').drawImage(debugFrame, 0, 0);
+
+        const debugMat = new cv2.Mat();
+        cv2.cvtColor(mat, debugMat, cv2.COLOR_RGBA2BGR);
+        cv2.drawDetectedMarkers(debugMat, corners, ids);
+
+        cv2.cvtColor(debugMat, debugMat, cv2.COLOR_BGR2RGBA);
+        const debugImageData = new ImageData(new Uint8ClampedArray(debugMat.data), debugMat.cols, debugMat.rows);
+        outCtx.putImageData(debugImageData, 0, 0);
+
+        mat.delete();
+
+        corners.delete();
+        ids.delete();
+        rejected.delete();
+
+        debugMat.delete();
+
+        const t4 = performance.now();
+        avgTime = avgTime * 0.9 + (t4 - t0) * 0.1;  
+        console.log(`imageData time: ${(t1 - t0).toFixed(2)}`);
+        console.log(`detectMarkers time: ${(t3 - t2).toFixed(2)}`);
+        console.log(`time: ${(t4 - t0).toFixed(2)}, avg: ${avgTime.toFixed(2)}`); // 50ms@1280x720
+      }
+
+      aruco_dict.delete();
+      aruco_detection_parameters.delete();
+      refine_parameters.delete();
+      detector.delete();
+    }
+    capture();
+  </script>
+</body>
+</html>

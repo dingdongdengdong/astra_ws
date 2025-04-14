@@ -1,0 +1,11 @@
+# Default initial positions for astra_description's ros2_control fake system
+
+initial_positions:
+  joint_r1: 0
+  joint_r2: 0
+  joint_r3: 0
+  joint_r4: 0
+  joint_r5: 0
+  joint_r6: 0
+  joint_r7l: 0
+  joint_r7r: 0

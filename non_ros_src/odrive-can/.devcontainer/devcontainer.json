@@ -1,0 +1,36 @@
+{
+  // Note: in this setup container extensions are saved on HOST system.
+  // This is done to avoid re-downloading extensions on every container restart.
+  // However, the commands used to create and mount directoreies WILL NOT WORK on Windows.
+  // If you are using Windows, you can either:
+  // 1. comment out "mounts" section and use default extensions directory
+  // 2. use WSL2
+  "initializeCommand": "./init_host.sh", // executed on HOST system
+
+  "image": "registry.gitlab.com/roxautomation/components/odrive-can",
+  "runArgs": ["--network", "host", "--privileged"],
+
+  "mounts": [
+    "source=/var/tmp/container-extensions,target=/home/dev/.vscode-server/extensions,type=bind,consistency=cached"
+  ],
+  "postCreateCommand": "./init_container.sh",
+
+  // Configure tool-specific properties.
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "shardulm94.trailing-spaces",
+        "njpwerner.autodocstring",
+        "mhutchie.git-graph",
+        "doi.fileheadercomment",
+        "donjayamanne.githistory",
+        "charliermarsh.ruff"
+      ]
+    }
+  }
+
+  // Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.
+  // "remoteUser": "root"
+}

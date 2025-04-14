@@ -1,0 +1,6 @@
+[run]
+omit =
+    tests/*
+    src/odrive_can/version.py
+    src/odrive_can/cli.py
+

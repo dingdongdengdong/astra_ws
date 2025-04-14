@@ -1,0 +1,8 @@
+build
+install
+log
+note.md
+.vscode
+venv
+cert.pem
+key.pem

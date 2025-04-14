@@ -1,0 +1,69 @@
+image: $CI_REGISTRY_IMAGE
+
+before_script:
+  - python --version
+  - cat /build_date.txt
+  - pip install .
+  # - export
+
+stages:
+  - docker_images
+  - test_stage
+  - docs_stage
+  - upload_stage
+
+pytest:
+  stage: test_stage
+  script:
+    - ruff check src
+    - mypy src
+    - pytest -v tests
+  artifacts:
+    when: on_success
+    expire_in: 5 days
+  # rules:
+  #   - changes:
+  #       - src/**/*
+
+pages:
+  image: sjev/mkdocs
+  stage: docs_stage
+  script:
+    - make public
+  artifacts:
+    paths:
+      - public
+    expire_in: 1 week
+  rules:
+    - changes:
+        - "*.md"
+        - docs/**/*
+        - "mkdocs.yml"
+
+upload:
+  stage: upload_stage
+  script:
+    - pip install build twine
+    - python -m build
+    - TWINE_PASSWORD=${PYPI_TOKEN} TWINE_USERNAME=__token__ python -m twine upload dist/*
+  rules:
+    - if: "$CI_COMMIT_TAG"
+
+# build docker containers
+build_images:
+  stage: docker_images
+  image: docker:latest
+
+  services:
+    - docker:dind
+
+  before_script:
+    - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+  script:
+    # ---- main image
+    - docker build -t $CI_REGISTRY_IMAGE  ./docker
+    - docker push $CI_REGISTRY_IMAGE
+  when: manual
+  # rules:
+  #   - changes:
+  #       - "docker/**/*"

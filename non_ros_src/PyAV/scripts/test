@@ -1,0 +1,37 @@
+#!/bin/bash
+
+# Exit as soon as something errors.
+set -e
+
+if [[ ! "$_PYAV_ACTIVATED" ]]; then
+    export here="$(cd "$(dirname "${BASH_SOURCE[0]}")"; pwd)"
+    source "$here/activate.sh"
+fi
+
+cd "$PYAV_ROOT"
+
+
+TESTSUITE="${1-main}"
+
+istest() {
+    [[ "$TESTSUITE" == all || "$TESTSUITE" == "$1" ]]
+    return $?
+}
+
+if istest main; then
+    $PYAV_PYTHON setup.py test
+fi
+
+if istest examples; then
+    for name in $(find examples -name '*.py'); do
+        echo
+        echo === $name
+        cd "$PYAV_ROOT"
+        mkdir -p "sandbox/$1"
+        cd "sandbox/$1"
+        if ! python "$PYAV_ROOT/$name"; then
+            echo FAILED $name with code $?
+            exit $?
+        fi
+    done
+fi

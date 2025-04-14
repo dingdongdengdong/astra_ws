@@ -1,0 +1,40 @@
+# This config file is used by ros2_control
+controller_manager:
+  ros__parameters:
+    update_rate: 100  # Hz
+
+    astra_right_arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+
+    astra_right_hand_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+astra_right_arm_controller:
+  ros__parameters:
+    joints:
+      - joint_r1
+      - joint_r2
+      - joint_r3
+      - joint_r4
+      - joint_r5
+      - joint_r6
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+astra_right_hand_controller:
+  ros__parameters:
+    joints:
+      - joint_r7l
+      - joint_r7r
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity

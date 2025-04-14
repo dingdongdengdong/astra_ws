@@ -1,0 +1,10 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: astra_description
+    relative_path: urdf/astra_description.urdf
+  srdf:
+    relative_path: config/astra_description.srdf
+  package_settings:
+    author_name: lookas
+    author_email: i@18kas.com
+    generated_timestamp: 1722164844

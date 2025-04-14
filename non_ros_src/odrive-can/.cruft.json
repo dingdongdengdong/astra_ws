@@ -1,0 +1,18 @@
+{
+  "template": "https://gitlab.com/sjev/python-template",
+  "commit": "48354627bbc5cdad87e4d6fdf13d6d4e7b1e16c5",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "author_name": "Jev Kuznetsov",
+      "author_email": "jev.kuznetsov@gmail.com",
+      "gitlab_username": "sjev",
+      "project_name": "odrive-can",
+      "project_slug": "odrive-can",
+      "package_name": "odrive_can",
+      "project_short_description": "Use odrive motion controller with CAN inteface",
+      "_template": "https://gitlab.com/sjev/python-template"
+    }
+  },
+  "directory": null
+}

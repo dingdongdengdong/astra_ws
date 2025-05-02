@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>so_arm100_bringup</name>
+  <version>0.1.0</version>
+  <description>Launch interface for the SO-ARM100 robot with MoveIt and ros2_control integration</description>
+  <maintainer email="kowook@todo.todo">kowook</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Run dependencies -->
+  <depend>rclpy</depend>
+  <depend>launch</depend>
+  <depend>launch_ros</depend>
+
+  <!-- Robot description and motion planning -->
+  <depend>so_arm100_description</depend>
+  <depend>so_arm100_moveit_config</depend>
+
+  <!-- Testing -->
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

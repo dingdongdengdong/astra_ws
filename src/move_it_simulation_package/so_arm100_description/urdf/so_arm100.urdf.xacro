@@ -1,0 +1,10 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://ros.org/wiki/xacro" name="so_arm100">
+
+  <!-- Include robot body (links and joints) -->
+  <xacro:include filename="so_arm100_body.xacro"/>
+
+  <!-- Include ros2_control configuration (hardcoded, no macro argument needed) -->
+  <xacro:include filename="so_arm100_ros2_control.xacro"/>
+
+</robot>

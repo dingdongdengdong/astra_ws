@@ -17,19 +17,25 @@ from pytransform3d import transformations as pt
 from pytransform3d import rotations as pr
 
 import modern_robotics as mr
-from mr_urdf_loader import loadURDF
+
 from matplotlib import pyplot as plt
 from urchin import URDF
 
 from astra_controller.experiments.leader_arm_controller import ArmController
 from astra_controller.astra_controller import pq_from_ros_transform
-from astra_teleop_web.teleoprator import GRIPPER_MAX
+#from astra_teleop_web.teleoprator import GRIPPER_MAX
 
 import math
 import time
 np.set_printoptions(precision=4, suppress=True)
 
 from pytransform3d.plot_utils import Frame
+
+from rclpy.node import Node
+from std_msgs.msg import String
+
+from astra_controller.hello_publisher import HelloPublisher
+from astra_controller.mr_urdf_loader import loadURDF
 
 # See https://github.com/ros2/rmw/blob/rolling/rmw/include/rmw/qos_profiles.h
 # print(rclpy.impl.implementation_singleton.rclpy_implementation.rmw_qos_profile_t.predefined('qos_profile_sensor_data').to_dict())
@@ -48,9 +54,10 @@ def main(args=None):
     rclpy.init(args=args)
 
     node = rclpy.node.Node("teleop_leader_arm_node")
-
+    node2 = HelloPublisher()
     logger = node.get_logger()
-    
+    rclpy.spin_once(node2, timeout_sec=10)
+
     def pub_T(pub: rclpy.publisher.Publisher, T, frame_id='base_link'):
         msg = geometry_msgs.msg.PoseStamped()
         msg.header.frame_id = frame_id
@@ -211,7 +218,7 @@ def main(args=None):
         Tsgoal = Tsinitgoal @ Tiniteefeef
         
         print(Tsgoal)
-        
+        GRIPPER_MAX = 0.055
         goal_gripper = gripper_state * GRIPPER_MAX
 
         pub_goal_cb("right", Tsgoal)

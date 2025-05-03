@@ -5,7 +5,7 @@ import rclpy.action  # Support for ROS actions (not used here)
 
 import sensor_msgs.msg  # Standard ROS messages for sensor data, e.g., JointState
 import astra_controller_interfaces.msg  # Custom ROS messages for joint commands
-import astra_controller_interfaces.srv  # Custom ROS services (not used here)
+#import astra_controller_interfaces.srv  # Custom ROS services (not used here)
 import std_msgs.msg  # Standard ROS messages, e.g., String for errors
 
 from .lift_controller import LiftController  # Import the LiftController class from the same package

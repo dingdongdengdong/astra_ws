@@ -30,6 +30,10 @@ from astra_teleop_web.teleoprator import GRIPPER_MAX
 
 import math
 import time
+
+from astra_controller.experiments.leader_arm_controller import ArmController
+
+
 np.set_printoptions(precision=4, suppress=True)
 
 # See https://github.com/ros2/rmw/blob/rolling/rmw/include/rmw/qos_profiles.h
@@ -108,6 +112,11 @@ def main(args=None):
 
     Tsgoal = pt.transform_from_pq(np.array(pq_from_ros_transform(Tsgoal_msg.transform)))
     goal_gripper = GRIPPER_MAX
+
+    gripper_angle_min = ArmController.JOINT_MIN[-1]
+    gripper_angle_max = ArmController.JOINT_MAX[-1]
+    goal_angle_gripper = np.clip(goal_gripper, gripper_min, gripper_max)
+
     
     # import IPython; IPython.embed()
 
@@ -117,6 +126,7 @@ def main(args=None):
     
     while True:
         action, buttons = agent.act(None)
+
         
         action[:3] *= 200.0 / 1000.0 * control_T # mm/s
         action[3:] *= 60 / 180 * math.pi * control_T # deg/s

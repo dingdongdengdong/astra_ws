@@ -42,6 +42,7 @@ setup(
             'cam_node = astra_controller.cam_node:main',
             'hello_publisher = astra_controller.hello_publisher:main',
             'hello_node = astra_controller.hello_node:main',
-        ],
+            'teleop_leader_arm_node = astra_controller.experiments.teleop_leader_arm_node:main',
+    ],
     },
 )

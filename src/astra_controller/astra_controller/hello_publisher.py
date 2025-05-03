@@ -14,13 +14,15 @@ class HelloPublisher(Node):
     msg.data = 'Hello, AhaRobot!'
     my_publisher.publish(msg)
     self.get_logger().info(f"메시지 발행 완료~{msg.data}")
-    rclpy.shutdown()
+
 
 def main(args=None):
     rclpy.init(args=args)
     node = HelloPublisher()
-    rclpy.spin(node)
+    rclpy.spin_once(node, timeout_sec=10)
+    
     node.destroy_node()
+    rclpy.shutdown()
 
 
 

@@ -12,7 +12,7 @@ class HelloPublisher(Node):
     time.sleep(5)
     msg = String()
     msg.data = 'Hello, AhaRobot!'
-    my_publisher.publisher(msg)
+    my_publisher.publish(msg)
     self.get_logger().info(f"메시지 발행 완료~{msg.data}")
     rclpy.shutdown()
 

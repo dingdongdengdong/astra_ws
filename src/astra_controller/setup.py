@@ -40,6 +40,8 @@ setup(
             'base_node = astra_controller.base_node:main',
             'head_node = astra_controller.head_node:main',
             'cam_node = astra_controller.cam_node:main',
+            'hello_publisher = astra_controller.hello_publisher:main',
+            'hello_node = astra_controller.hello_node:main',
         ],
     },
 )

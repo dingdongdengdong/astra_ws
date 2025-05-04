@@ -34,7 +34,7 @@ from pytransform3d.plot_utils import Frame
 from rclpy.node import Node
 from std_msgs.msg import String
 
-from astra_controller.hello_publisher import HelloPublisher
+#from astra_controller.hello_publisher import HelloPublisher
 from astra_controller.mr_urdf_loader import loadURDF
 
 # See https://github.com/ros2/rmw/blob/rolling/rmw/include/rmw/qos_profiles.h
@@ -54,9 +54,16 @@ def main(args=None):
     rclpy.init(args=args)
 
     node = rclpy.node.Node("teleop_leader_arm_node")
-    node2 = HelloPublisher()
+    hello_publisher = node.create_publisher(String, '/my_test_topic', 10)
+    node.get_logger().info('hello after 5sec')
+    time.sleep(5)
+    msg = String()
+    msg.data = 'Hello, AhaRobot!'
+    hello_publisher.publish(msg)
+    node.get_logger().info(f"메시지 발행 완료~{msg.data}")
+    #node2 = HelloPublisher()
     logger = node.get_logger()
-    rclpy.spin_once(node2, timeout_sec=10)
+    #rclpy.spin_once(node2, timeout_sec=10)
 
     def pub_T(pub: rclpy.publisher.Publisher, T, frame_id='base_link'):
         msg = geometry_msgs.msg.PoseStamped()

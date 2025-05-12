@@ -2,7 +2,7 @@
 import cv2
 import time
 from pathlib import Path
-from .cam import open_cam
+from cam import open_cam
 import argparse
 
 def calibration_collect(device="/dev/video0", calibration_directory="./calibration_images", num_images_to_collect=60):
@@ -32,7 +32,15 @@ def calibration_collect(device="/dev/video0", calibration_directory="./calibrati
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("-d", "--device", help="Device name.", default="/dev/video0")
+    parser.add_argument(
+        "-d", "--device",
+        help="Camera device: integer index (0,1,2…) on macOS/Windows, or path like /dev/video0 on Linux",
+        default=0,
+        # 여기서 int를 쓰면 "0" 입렵시 정수 0이 할당됩니다.
+        type=int  
+    )
+    
+    #parser.add_argument("-d", "--device", help="Device name.", default="/dev/video0")
     parser.add_argument("-c", "--calibration_directory", help="Calibration directory.", default="./calibration_images")
     parser.add_argument("-n", "--num_images_to_collect", help="num_images_to_collect", default=60, type=int)
     args = parser.parse_args()

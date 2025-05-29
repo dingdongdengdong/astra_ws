@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>OpenCV.js Resize Benchmark</title>
+  <script src="opencv_simd.js"></script>
+</head>
+<body>
+  <div id="result"></div>
+
+  <script>
+    async function runBenchmark() {
+        window.cv2 = await cv;
+        
+        // Warm up run
+        const mat = new cv2.Mat(1080, 1920, cv2.CV_8UC3);
+        cv2.resize(mat, mat, new cv2.Size(960, 540), 0, 0, cv2.INTER_LINEAR) // lower resolution for faster output # time consuming
+
+        const iterations = 100;
+        const t0 = performance.now();
+        for(let i = 0; i < iterations; i++) {
+            const t00 = performance.now();
+            const mat = new cv2.Mat(1080, 1920, cv2.CV_8UC3);
+            const t01 = performance.now();
+            cv2.resize(mat, mat, new cv2.Size(960, 540), 0, 0, cv2.INTER_LINEAR);
+            const t02 = performance.now();
+            console.log(`${t01 - t00} ${t02 - t01}`);
+        }
+        const t1 = performance.now();
+        const avgTime = (t1 - t0) / iterations;
+
+        document.getElementById('result').innerHTML = 
+            `Average time per resize: ${avgTime.toFixed(2)} ms`;
+
+        mat.delete();
+        
+        console.log("nonono")
+    }
+  </script>
+</body>
+</html>

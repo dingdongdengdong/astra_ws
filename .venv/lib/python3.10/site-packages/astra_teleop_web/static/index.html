@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Astra Teleop</title>
+    <script src="tailwind-play-cdn-3.4.5.js"></script>
+    <link href="flowbite.min.css" rel="stylesheet" />
+    <link href="toastr.min.css" rel="stylesheet"/>
+    <style>
+        body #toast-container > div {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container mx-auto py-4 sm:px-4 grid grid-cols-3 gap-4">
+    <div class="mx-auto p-6 bg-white border-y sm:border-x border-gray-200 sm:rounded-lg shadow col-span-3 w-full">
+        <h5 class="text-2xl font-bold tracking-tight text-gray-900">Astra Teleop</h5>
+    </div>
+    <div class="mx-auto p-6 bg-white border-y sm:border-x border-gray-200 sm:rounded-lg shadow col-span-2 w-full">
+        <div>
+            <button id="capture" onclick="capture()" class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded disabled:opacity-50 disabled:cursor-not-allowed mb-3">
+                Start Capture
+            </button>
+
+            <button id="connect-pedal" onclick="connectPedal()" class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded disabled:opacity-50 disabled:cursor-not-allowed mb-3">
+                Connect Pedal
+            </button>
+
+            <button id="calibrate" onclick="calibrate()" class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded disabled:opacity-50 disabled:cursor-not-allowed mb-3">
+                Calibrate Camera
+            </button>
+
+            <button id="calibrate-pedal" onclick="calibratePedal()" class="bg-white hover:bg-gray-100 text-gray-800 font-semibold py-2 px-4 border border-gray-400 rounded disabled:opacity-50 disabled:cursor-not-allowed mb-3">
+                Calibrate Pedal
+            </button>
+
+            <button id="start" onclick="start()" class="bg-blue-500 hover:bg-blue-700 text-white font-semibold py-2 px-4 border border-blue-500 rounded disabled:opacity-50 disabled:cursor-not-allowed mb-3">
+                Start Stream
+            </button>
+        </div>
+        <div id="player" class="hidden">
+            <audio id="audio"></audio>
+            <video id="video-head" playsinline="true" muted="true" style="object-fit: initial; width: 100%;" class="inline-block"></video><br />
+            <video id="video-wrist-left" playsinline="true" muted="true" style="object-fit: initial; width: 50%;" class="inline-block"></video><!-- remove space
+            --><video id="video-wrist-right" playsinline="true" muted="true" style="object-fit: initial; width: 50%;" class="inline-block"></video>
+        </div>
+        <p class="mt-3 font-normal text-gray-700">
+            <div class="flex justify-stretch w-full">
+                <div class="w-full">Left Gripper: <span id="gripper-lock-left">Unknown</span></div>
+                <div class="w-full text-center"><span id="teleop-mode" class="font-bold">Unknown</span> Mode</div>
+                <div class="w-full text-right">Right Gripper: <span id="gripper-lock-right">Unknown</span></div>
+            </div>
+        </p>
+        <p class="mt-3 font-normal text-gray-700">
+            Shortcuts: [0] for disable teleop, [`] for base mode, [1] for arm mode, [Shift+`] for base mode with reset, [Shift+1] for arm mode with reset, [r] for reset robot, [f] for send done signal, [t] for start stream
+        </p>
+    </div>
+    <div class="mx-auto p-6 bg-white border-y sm:border-x border-gray-200 sm:rounded-lg shadow w-full">
+        <div>
+            <h6 class="mb-2 text-2xl font-bold tracking-tight text-gray-900">Capture Playback</h6>
+            <p class="mt-3 font-normal text-gray-700">
+                ArUco Timing: <span id="aruco-timing">INF</span>ms | Network: <span id="pc-status">idle</span> <span id="pc-ping">INF</span>ms
+            </p>
+            <canvas id="canvas-imshow" class="mt-3 w-full"></canvas>
+            <p class="mt-3 font-normal text-gray-700">
+                Video from your device will be processed locally by OpenCV.js, and will NOT be uploaded to the server.
+            </p>
+        </div>
+        <div class="mt-6">
+            <h6 class="mb-2 text-2xl font-bold tracking-tight text-gray-900">Pedal Status</h6>
+            <p class="mt-3 font-normal text-gray-700">
+                <span id="pedal-status">Connect pedal!</span>
+            </p>
+            <!-- Ref: https://stackoverflow.com/questions/39809103/vertical-slider-for-chrome-and-moz -->
+            <div class="[writing-mode:vertical-lr] [direction:ltr] mt-3">
+                <!-- Ref: https://flowbite.com/docs/forms/range/ -->
+                <label for="pedal-angular-pos" class="block text-sm font-medium text-gray-900 dark:text-white">Angular +</label>
+                <input id="pedal-angular-pos" type="range" orient="vertical" value="50" class="mr-6 w-2 h-full bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" disabled>
+                <label for="pedal-angular-neg" class="block text-sm font-medium text-gray-900 dark:text-white">Angular -</label>
+                <input id="pedal-angular-neg" type="range" orient="vertical" value="50" class="mr-6 w-2 h-full bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" disabled>
+                <label for="pedal-linear-neg" class="block text-sm font-medium text-gray-900 dark:text-white">Linear -</label>
+                <input id="pedal-linear-neg" type="range" orient="vertical" value="50" class="mr-6 w-2 h-full bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" disabled>
+                <label for="pedal-linear-pos" class="block text-sm font-medium text-gray-900 dark:text-white">Linear +</label>
+                <input id="pedal-linear-pos" type="range" orient="vertical" value="50" class="mr-6 w-2 h-full bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700" disabled>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="jquery-3.7.1.min.js"></script>
+<script src="flowbite.min.js"></script>
+<script src="toastr.min.js"></script>
+<script src="opencv_simd.js"></script>
+<script src="index.js"></script>
+</body>
+</html>

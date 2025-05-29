@@ -1,0 +1,2 @@
+[console_scripts]
+odrive_can = odrive_can.cli:cli
